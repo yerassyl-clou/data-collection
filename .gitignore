@@ -1,8 +1,15 @@
+# python
 .venv/
 __pycache__/
 *.pyc
-.DS_Store
+
+# local db / data
 data/*.db
-data/*.sqlite
+
+# airflow
 airflow/logs/
-airflow/*.log
+airflow/dags/__pycache__/
+
+# mac
+.DS_Store
+EOF
