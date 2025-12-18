@@ -3,6 +3,7 @@ This repository contains our final group project implementation: a complete Dock
 Data source: OpenAQ API v3 - air quality measurements (frequently updating real-world data).
 
  **Project Goal**
+ 
 **Demonstrate the ability to:**
 - collect frequently updating data from a real API,
 - stream raw events through Kafka,
@@ -11,6 +12,7 @@ Data source: OpenAQ API v3 - air quality measurements (frequently updating real-
 - document the pipeline and results
 
 **Architecture Overview**
+
 **DAG 1 — Continuous Ingestion (Pseudo Streaming)**
 Flow: API -> Producer -> Kafka (`raw_events`)  
 - Runs periodically and produces new events on each execution
