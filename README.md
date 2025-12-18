@@ -1,17 +1,17 @@
-Final Group Project - Streaming + Batch Data Pipeline (Airflow + Kafka + SQLite)
+# Final Group Project - Streaming + Batch Data Pipeline (Airflow + Kafka + SQLite)
 This repository contains our final group project implementation: a complete Docker-based streaming + batch data pipeline orchestrated with Apache Airflow, using Kafka as a message broker and SQLite as a storage/analytics layer.
 Data source: OpenAQ API v3 - air quality measurements (frequently updating real-world data).
 
-Project Goal
-Demonstrate the ability to:
+ **Project Goal**
+**Demonstrate the ability to:**
 - collect frequently updating data from a real API,
 - stream raw events through Kafka,
 - clean and store data to SQLite in hourly batches,
 - run daily analytics on stored data,
 - document the pipeline and results
 
-Architecture Overview
-DAG 1 — Continuous Ingestion (Pseudo Streaming)
+**Architecture Overview**
+**DAG 1 — Continuous Ingestion (Pseudo Streaming)**
 Flow: API -> Producer -> Kafka (`raw_events`)  
 - Runs periodically and produces new events on each execution
 - Fetches new data from the OpenAQ API every run
@@ -20,7 +20,7 @@ Flow: API -> Producer -> Kafka (`raw_events`)
 Outputs:
 - Kafka topic: `raw_events`
 
-DAG 2 — Hourly Cleaning + Storage (Batch)
+**DAG 2 — Hourly Cleaning + Storage (Batch)**
 Schedule: `@hourly`  
 Flow: Kafka -> Cleaning -> SQLite (`events`)  
 - Reads all new Kafka messages since last run
@@ -30,7 +30,7 @@ Flow: Kafka -> Cleaning -> SQLite (`events`)
 Outputs:
 - SQLite table: `events`
 
-DAG 3 — Daily Analytics (Batch)
+**DAG 3 — Daily Analytics (Batch)**
 Schedule: `@daily`  
 Flow: SQLite (`events`) -> Aggregation -> SQLite (`daily_summary`)  
 - Reads cleaned data from SQLite
@@ -40,7 +40,7 @@ Flow: SQLite (`events`) -> Aggregation -> SQLite (`daily_summary`)
 Outputs:
 - SQLite table: `daily_summary`
 
-Data Source (API)
+**Data Source (API)**
 We use OpenAQ API v3, a public and well-documented environmental data API
 Why it satisfies requirements:
 - Real-world data, non-random
@@ -52,7 +52,7 @@ We fetch:
 - Sensors list for location (to map parameter names)
 - Latest measurements for sensors
 
-Kafka Topic Schema
+**Kafka Topic Schema**
 
 Topic: `raw_events`
 Messages are raw JSON objects produced from OpenAQ responses
@@ -71,7 +71,7 @@ Example fields:
 
 Exact structure depends on API response and enrichment fields in `job1_producer.py`
 
-Cleaning Rules (Job 2)
+**Cleaning Rules (Job 2)**
 During hourly batch cleaning we apply:
 - Type conversion:
   - numeric fields (`value`, lat/lon, ids) -> `float/int`
@@ -122,12 +122,12 @@ Recommended columns:
 The exact schema should match the SQL created/used in `job2_cleaner.py` and `job3_analytics.py`.
 
 
-Airflow Metadata Database
+**Airflow Metadata Database**
 - PostgreSQL is used only for Airflow metadata (DAG states, task status, logs metadata)
 - Project data is stored in SQLite (app.db), not in PostgreSQL
 
 
-Quick Start (How to run)
+**Quick Start (How to run)**
 
 Prerequisites
 - Python
