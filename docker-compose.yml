@@ -31,6 +31,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=mysupersecretkey_123
     command: bash -c "airflow db init && airflow users create --username airflow --password airflow --firstname a --lastname a --role Admin --email a@a.a"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -45,6 +46,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=mysupersecretkey_123
 
       - OPENAQ_API_KEY=${OPENAQ_API_KEY}
       - OPENAQ_LOCATION_ID=${OPENAQ_LOCATION_ID}
@@ -66,6 +68,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=mysupersecretkey_123
     command: airflow webserver
     ports:
       - "8080:8080"
