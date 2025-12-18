@@ -1,6 +1,6 @@
 Final Group Project - Streaming + Batch Data Pipeline (Airflow + Kafka + SQLite)
-This repository contains our final group project implementation: a complete streaming + batch data pipeline with Airflow DAGs, using Kafka as a message broker and SQLite as a storage/analytics layer.
-Data source: OpenAQ API - air quality measurements (frequently updating real-world data).
+This repository contains our final group project implementation: a complete Docker-based streaming + batch data pipeline orchestrated with Apache Airflow, using Kafka as a message broker and SQLite as a storage/analytics layer.
+Data source: OpenAQ API v3 - air quality measurements (frequently updating real-world data).
 
 Project Goal
 Demonstrate the ability to:
@@ -8,14 +8,14 @@ Demonstrate the ability to:
 - stream raw events through Kafka,
 - clean and store data to SQLite in hourly batches,
 - run daily analytics on stored data,
-- document the pipeline and results.
+- document the pipeline and results
 
 Architecture Overview
 DAG 1 — Continuous Ingestion (Pseudo Streaming)
 Flow: API -> Producer -> Kafka (`raw_events`)  
-- Runs regularly and launches a long-running producer process.
-- Fetches new data from API every few minutes.
-- Sends raw JSON messages into Kafka topic.
+- Runs periodically and produces new events on each execution
+- Fetches new data from the OpenAQ API every run
+- Sends raw JSON messages into Kafka topic
 
 Outputs:
 - Kafka topic: `raw_events`
@@ -23,9 +23,9 @@ Outputs:
 DAG 2 — Hourly Cleaning + Storage (Batch)
 Schedule: `@hourly`  
 Flow: Kafka -> Cleaning -> SQLite (`events`)  
-- Reads all new Kafka messages since last run.
-- Cleans and normalizes data (type conversion, missing fields, invalid values).
-- Writes cleaned rows into SQLite database.
+- Reads all new Kafka messages since last run
+- Cleans and normalizes data (type conversion, missing fields, invalid values)
+- Writes cleaned rows into SQLite database
 
 Outputs:
 - SQLite table: `events`
@@ -33,20 +33,20 @@ Outputs:
 DAG 3 — Daily Analytics (Batch)
 Schedule: `@daily`  
 Flow: SQLite (`events`) -> Aggregation -> SQLite (`daily_summary`)  
-- Reads cleaned data from SQLite.
-- Computes aggregated daily metrics.
-- Writes results to separate summary table.
+- Reads cleaned data from SQLite
+- Computes aggregated daily metrics
+- Writes results to separate summary table
 
 Outputs:
 - SQLite table: `daily_summary`
 
 Data Source (API)
-We use OpenAQ API v3.
+We use OpenAQ API v3, a public and well-documented environmental data API
 Why it satisfies requirements:
-- Real-world data, non-random.
-- Frequently updating (air quality measurements update hourly or more often depending on station).
-- Structured JSON.
-- Public, stable, documented.
+- Real-world data, non-random
+- Frequently updating (air quality measurements update hourly or more often depending on station)
+- Structured JSON
+- Public, stable, documented
 
 We fetch:
 - Sensors list for location (to map parameter names)
@@ -55,7 +55,7 @@ We fetch:
 Kafka Topic Schema
 
 Topic: `raw_events`
-Messages are raw JSON objects produced from OpenAQ responses.
+Messages are raw JSON objects produced from OpenAQ responses
 
 Example fields:
 - `location_id` (int)
@@ -69,7 +69,7 @@ Example fields:
 - `country`, `city` (string)
 - `producer_ts` (ISO string)
 
-Exact structure depends on API response and enrichment fields in `job1_producer.py`.
+Exact structure depends on API response and enrichment fields in `job1_producer.py`
 
 Cleaning Rules (Job 2)
 During hourly batch cleaning we apply:
@@ -86,10 +86,12 @@ During hourly batch cleaning we apply:
   - prevent writing duplicates (based on `sensor_id + datetime` when possible)
 
 SQLite Storage (Schema)
-Database file: `app.db` (or configured path in code)
+Database file: app.db
+	-	Host path: data/app.db
+	-	Inside Airflow Docker containers: /opt/airflow/data/app.db
 
 Table: `events` (cleaned events)
-Stores cleaned rows from Kafka.
+Stores cleaned rows from Kafka
 
 Columns:
 - `id` INTEGER PRIMARY KEY AUTOINCREMENT
@@ -107,7 +109,7 @@ Columns:
 - `inserted_at_utc` TEXT
 
 Table: `daily_summary` (aggregated analytics)
-Stores daily aggregated metrics.
+Stores daily aggregated metrics
 
 Recommended columns:
 - `date_utc` TEXT
@@ -120,37 +122,63 @@ Recommended columns:
 The exact schema should match the SQL created/used in `job2_cleaner.py` and `job3_analytics.py`.
 
 
+Airflow Metadata Database
+- PostgreSQL is used only for Airflow metadata (DAG states, task status, logs metadata)
+- Project data is stored in SQLite (app.db), not in PostgreSQL
+
+
 Quick Start (How to run)
 
 Prerequisites
 - Python
-- Apache Airflow
-- Kafka broker running (local or Docker)
+- Docker and Docker Compose installed (Airflow, Kafka, PostgreSQL are started using Docker Compose)
 
 1) Environment variables
-Job 1 (producer) requires OpenAQ API key, and all jobs need Kafka + SQLite settings.
+Job 1 (producer) requires OpenAQ API key, and all jobs need Kafka + SQLite settings
 
 Set (at minimum):
 - `OPENAQ_API_KEY` — required
-- `KAFKA_BOOTSTRAP` — example: `localhost:9092` (local) or `kafka:9092` (Docker network)
+- `KAFKA_BOOTSTRAP`:
+  - inside Docker: kafka:9093
+  - from host: localhost:9092
 - `KAFKA_TOPIC` — default: `raw_events`
-- `SQLITE_PATH` — recommended:
+- `SQLITE_PATH`:
   - local: `data/app.db`
   - in Airflow Docker: `/opt/airflow/data/app.db`
 
 Optional:
 - `OPENAQ_LOCATION_ID` — default in code: `8118`
+- `POLL_SECONDS`
 
-In Docker/Airflow, pass these variables via `docker-compose.yml` (environment section).  
-Locally, you can export them in terminal.
+In Docker/Airflow, pass these variables via `docker-compose.yml` (environment section)
+Locally, you can export them in terminal
 
-2) Start Kafka
-If you already have Kafka running — skip this.
+2) Start the Project 
 
-Create the topic:
 ```bash
-kafka-topics --create \
-  --topic raw_events \
-  --bootstrap-server localhost:9092 \
-  --partitions 1 \
-  --replication-factor 1
+docker compose down
+docker compose up -d --build
+docker compose ps
+docker compose run --rm airflow-init
+docker compose restart airflow-webserver airflow-scheduler
+```
+
+3) Open Airflow UI
+
+- URL: http://localhost:8080
+- Username: airflow
+- Password: airflow
+
+Stop and Restart Project
+
+Stop containers: 
+```bash
+docker compose stop
+```
+
+Start again:
+```bash
+docker compose up -d
+docker compose run --rm airflow-init
+docker compose restart airflow-webserver airflow-scheduler
+```
